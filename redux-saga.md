@@ -15,6 +15,7 @@ proc里创建了"三个task":
   return task;
 ```
 
+cb是上文的next
 ```JavaScript
     // Completion callback passed to the appropriate effect runner
     function currCb(res, isErr) {
@@ -31,6 +32,7 @@ proc里创建了"三个task":
     }
 ```
 
+cb是上文的currCb
 ```JavaScript
   function runForkEffect({ context, fn, args, detached }, effectId, cb) {
     const taskIterator = createTaskIterator({ context, fn, args })

@@ -1,4 +1,15 @@
+# TL;TR;
+[function* - JavaScript | MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*)
+[Read Me · Redux-Saga](https://redux-saga.js.org/)
 [浅析redux-saga实现原理](https://zhuanlan.zhihu.com/p/30098155)
+
+# Code Structure
+代码版本： 0.15.6
+https://github.com/redux-saga/redux-saga/tree/v0.15.6
+
+```
+```
+
 
 proc里创建了"三个task":
 

@@ -1,13 +1,35 @@
 # TL;TR;
-[function* - JavaScript | MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*)
-[Read Me · Redux-Saga](https://redux-saga.js.org/)
-[浅析redux-saga实现原理](https://zhuanlan.zhihu.com/p/30098155)
+- ES6 Generator：[function* - JavaScript | MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*)
+- Redux-Saga Doc：[Read Me · Redux-Saga](https://redux-saga.js.org/)
+- [浅析redux-saga实现原理](https://zhuanlan.zhihu.com/p/30098155)
+
+开始后续的阅读之前，有几点需要注意：
+- 需要有Generator，Saga的基本上下文，没有的话请戳上面给出的几个链接
+- 下面的代码分析基于版本： [v0.15.6](https://github.com/redux-saga/redux-saga/tree/v0.15.6)
 
 # Code Structure
-代码版本： 0.15.6
-https://github.com/redux-saga/redux-saga/tree/v0.15.6
 
 ```
+src
+├── effects.js
+├── index.js
+├── internal
+│   ├── buffers.js    // 
+│   ├── channel.js    // 
+│   ├── channels-trans-table.png
+│   ├── io.js         // 描述了saga中各种Effect(plain object)
+│   ├── middleware.js // 定义了createSagaMiddleware function
+│   ├── proc.js       // 包含主要逻辑
+│   ├── runSaga.js    // 定义了sagaMiddleware.run function
+│   ├── sagaHelpers
+│   │   ├── fsmIterator.js 
+│   │   ├── index.js
+│   │   ├── takeEvery.js
+│   │   ├── takeLatest.js
+│   │   └── throttle.js
+│   ├── scheduler.js  // 
+│   └── utils.js      // general的辅助函数
+└── utils.js
 ```
 
 

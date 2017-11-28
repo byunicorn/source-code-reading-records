@@ -49,35 +49,26 @@ plain object，用来描述需要saga处理的指令，例如take，put，call�
 
 首先来看proc.js里面最主要的函数`function proc(iterator, subscribe, dispatch, getState, parentContext, options, parentEffectId, name, cont)`。
 
-proc里创建了"三个task"，Parent Task / Main Task / Forked Tasks:
-
 ```JavaScript
-
-// Parent task = Main Tasks + Forked Tasks 
-// taskQueue用来记录parent task和它的forked tasks
-// forked tasks默认会被attach到它的parent task上 
-// main task是当前generator的main flow
-// 整个执行的模型呈现为一棵有多个分支的树
-
-// 一个parent task有以下几个定义：
-
-// 如果它所有的forks都结束/取消了，那么它就结束了
-// 如果它被取消了，它的所有forks都会被取消
-// 如果从forks里有没有被catch住的error throw出来，那么它会被暂停
-// 如果它结束，那么返回的是main task的返回值
-
-// 创建一个新的task object，包含当前iterator的执行上下文
+// parent task: 创建一个新的task object，包含当前iterator，即parent iterator的执行上下文
 const task = newTask(parentEffectId, name, iterator, cont) 
+
+// mainTask: 用来控制当前generator的main flow（mainTask本身并没有generator相关的信息，只是用来控制flow
 const mainTask = { name, cancel: cancelMain, isRunning: true }
 
-// fork task queue
+// taskQueue: 一个包含mainTask 以及forked tasks的队列
+// 当parent task被取消`task.cancel()`，taskQueue里所有的task都会被取消(cancelAll)；
+// 当forked tasks中有没有catch住的error被throw出来，那么parent task会被暂停(taskQueue.abort)；
+// 当parent task结束(result.done)，mainTask将从taskQueue里移除（它的fork tasks可能还存活）
 const taskQueue = forkQueue(name, mainTask, end)
 
-// next会调用runEffect 方法来处理yeild的返回值 / effect
+// 调用正确的effect runner 来处理Generator yield返回的Effect
 next();
 
 return task;
 ```
+
+整个执行的模型呈现为一棵有多个分支的树，每次调用fork effect，就会生成一个
 
 cb是上文的next
 ```JavaScript

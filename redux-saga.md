@@ -43,9 +43,32 @@ plain object，用来描述需要saga处理的指令，例如take，put，call�
 
 - Channel
 
-# Source Code
+## Fork Model
 
-## `proc.js`
+Saga的整个执行模型呈现为一棵有多个分支的树，rootSaga为根，每调用一次fork effect就会分产生一个子节点。这些节点之间是（伪）并行执行的。
+
+举个例子：
+
+```JavaScript
+export function* fetchPosts(reddit) {
+  yield put( actions.requestPosts(reddit) )
+  const posts = yield call(fetchPostsApi, reddit)
+  yield put( actions.receivePosts(reddit, posts) )
+}
+
+export function* startup() {
+  const selectedReddit = yield select(selectedRedditSelector)
+  yield fork(fetchPosts, selectedReddit)
+}
+
+export default function* root() {
+  yield fork(startup)
+  yield fork(nextRedditChange)
+  yield fork(invalidateReddit)
+}
+```
+
+上面的代码摘自saga源码`examples/async/src/index.js`，root 
 
 首先来看proc.js里面最主要的函数`function proc(iterator, subscribe, dispatch, getState, parentContext, options, parentEffectId, name, cont)`。
 
@@ -58,7 +81,7 @@ const mainTask = { name, cancel: cancelMain, isRunning: true }
 
 // taskQueue: 一个包含mainTask 以及forked tasks的队列
 // 当parent task被取消`task.cancel()`，taskQueue里所有的task都会被取消(cancelAll)；
-// 当forked tasks中有没有catch住的error被throw出来，那么parent task会被暂停(taskQueue.abort)；
+// 当forked tasks中有没有catch住的error被throw出来，parent task会被暂停(taskQueue.abort)；
 // 当parent task结束(result.done)，mainTask将从taskQueue里移除（它的fork tasks可能还存活）
 const taskQueue = forkQueue(name, mainTask, end)
 
@@ -66,95 +89,4 @@ const taskQueue = forkQueue(name, mainTask, end)
 next();
 
 return task;
-```
-
-整个执行的模型呈现为一棵有多个分支的树，每次调用fork effect，就会生成一个
-
-cb是上文的next
-```JavaScript
-    // Completion callback passed to the appropriate effect runner
-    function currCb(res, isErr) {
-      if (effectSettled) {
-        return
-      }
-
-      effectSettled = true
-      cb.cancel = noop // defensive measure
-      if (sagaMonitor) {
-        isErr ? sagaMonitor.effectRejected(effectId, res) : sagaMonitor.effectResolved(effectId, res)
-      }
-      cb(res, isErr)
-    }
-```
-
-cb是上文的currCb
-```JavaScript
-  function runForkEffect({ context, fn, args, detached }, effectId, cb) {
-    const taskIterator = createTaskIterator({ context, fn, args })
-
-    try {
-      suspend()
-      const task = proc(
-        taskIterator,
-        subscribe,
-        dispatch,
-        getState,
-        taskContext,
-        options,
-        effectId,
-        fn.name,
-        detached ? null : noop,
-      )
-
-      if (detached) {
-        cb(task)
-      } else {
-        if (taskIterator._isRunning) {
-          taskQueue.addTask(task)
-          cb(task)
-        } else if (taskIterator._error) {
-          taskQueue.abort(taskIterator._error)
-        } else {
-          cb(task)
-        }
-      }
-    } finally {
-      flush()
-    }
-    // Fork effects are non cancellables
-  }
-```
-
-```JavaScript
-  function newTask(id, name, iterator, cont) {
-    iterator._deferredEnd = null
-    return {
-      [TASK]: true,
-      id,
-      name,
-      get done() {
-        if (iterator._deferredEnd) {
-          return iterator._deferredEnd.promise
-        } else {
-          const def = deferred()
-          iterator._deferredEnd = def
-          if (!iterator._isRunning) {
-            iterator._error ? def.reject(iterator._error) : def.resolve(iterator._result)
-          }
-          return def.promise
-        }
-      },
-      cont,
-      joiners: [],
-      cancel,
-      isRunning: () => iterator._isRunning,
-      isCancelled: () => iterator._isCancelled,
-      isAborted: () => iterator._isAborted,
-      result: () => iterator._result,
-      error: () => iterator._error,
-      setContext(props) {
-        check(props, is.object, createSetContextWarning('task', props))
-        object.assign(taskContext, props)
-      },
-    }
 ```
